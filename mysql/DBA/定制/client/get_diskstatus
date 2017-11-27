@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Data::Dumper;
+
+my %disk;
+my @diskinfo = ();
+open(DiskSize, "df -Pm | grep ^/ | grep -v proc | grep -v none |");
+my @dfsize=<DiskSize>;
+close(DiskSize);
+#print "@dfsize";
+foreach my $line (@dfsize)
+  {
+      chomp($line);
+      $line =~ s/ +/,/g;
+      $line =~ s/\%//g;
+      my ($filesystem, $totalmb, $usedmb, $freemb , $pct, $mount) = split ",", $line;
+      $disk{$mount}{Device} = $filesystem;
+      $disk{$mount}{TotalSize} = $totalmb;
+      $disk{$mount}{UsedSize} = $usedmb;
+      $disk{$mount}{freemb} = $freemb;
+      $disk{$mount}{Usepct} = $pct;
+      $disk{$mount}{mount}  = $mount;
+  }
+open(DiskInode, "df -Pi | grep ^/ | grep -v proc | grep -v none |");
+my @dfinode=<DiskInode>;
+close(DiskInode);
+foreach my $line (@dfinode)
+  {
+      chomp($line);
+      $line =~ s/ +/,/g;
+      $line =~ s/\%//g;
+      my ($filesystem, $totalinode, $iused, $ifree , $ipct, $mount) = split ",", $line;
+      $disk{$mount}{TotalInode} = $totalinode;
+      $disk{$mount}{iused} = $iused;
+      $disk{$mount}{ifree} = $ifree;
+      $disk{$mount}{iPct} = $ipct;
+}
+for my $mount (keys %disk) {
+	print "$mount:";
+	for my $info ( sort keys %{ $disk{$mount} } ){
+	print "$info=$disk{$mount}{$info} "
+}
+print "\n";
+}

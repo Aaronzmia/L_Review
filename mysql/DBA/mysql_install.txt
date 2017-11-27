@@ -1,0 +1,71 @@
+1. 下载MySQL
+	wget http://dev.mysql.com/get/Downloads/MySQL-5.6/mysql-5.6.29-linux-glibc2.5-x86_64.tar.gz
+	
+2.  解压
+	cd /opt/
+	mkdir mysql
+	cd mysql
+	tar zxvf /path/mysql-5.6.29.... 
+	ln -s  /opt/mysql/mysql-5.6.29-linux-glibc2.5-x86_64 /usr/local/mysql 
+	cd /usr/local/mysql
+	cp support-files/mysql.server /etc/init.d/
+3.  创建用户
+	groupadd mysql
+	useradd -g mysql -M -s /sbin/nologin mysql 
+	
+4. 环境变量
+	vim /etc/profile
+	PATH=$PATH:/usr/local/mysql
+    source /etc/profile 
+	
+====== 启动起来  ========================
+
+5.  创建必须的目录
+	/data/mysql/mysql3376/
+						 data
+						 tmp
+						 logs
+	mkdir -p /data/mysql/mysql3376/{data,tmp,logs}
+6. 权限
+   chown -R mysql:mysql /data/mysql/mysql3376/
+   chown -R mysql:mysql /opt/mysql
+   chown -R mysql:mysql  /usr/local/mysql 
+   
+7. 创建一个配置文件
+	vim  %s/3306/3376/g
+	 socket          = /tmp/mysql3376.sock
+	 innodb_data_file_path = ibdata1:100M:autoextend
+
+8. 初始化
+   cd /usr/local/mysql
+    ./scripts/mysql_install_db --defaults-file=/etc/my.cnf
+	看到两次ok
+	
+9. 启动 & 关闭
+   /etc/init.d/mysql start  or  service mysql start 
+   /usr/local/mysql/bin/mysqld_safe --defaults-file=/etc/my.cnf & 
+   /usr/local/mysql/bin/mysqld  --defaults-file=/etc/my.cnf &
+   
+   关闭：
+   /etc/init.d/mysql stop 
+   /usr/local/mysql/bin/mysqladmin -S /tmp/mysql3376.sock  shutdown 
+   
+   
+10. 安全加固
+	delete from mysql.user where user!='root' or host!='localhost';
+	truncate table mysql.db;
+	drop database test;
+	flush privileges;
+   
+怎么确认mysql是启动起来的？
+	A 查看进程是否存在
+	ps axu |grep mysqld
+	B 查看端口是不是监听正确
+	netstat -nalp |grep mysqld
+	ss -lnpt |grep mysqld
+
+	C 看看错误日志有无异常
+	vim shit+g 
+	tail 
+   
+ 

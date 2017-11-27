@@ -1,0 +1,92 @@
+﻿[同步端配置]：rsync默认已安装
+$ mkdir /etc/rsyncd
+$ touch /etc/rsyncd/rsyncd.{conf,passwd}
+$ vim /etc/rsyncd/rsyncd.conf
+    #Configure
+    uid = root                      #进程以root用户执行，
+    gid = root                    
+    use chroot = no                   
+    max connections = 10              
+    strict modes = yes                #开启严格模式
+    pid file = /var/run/rsyncd.pid    #pid文件位置
+    log filep = /var/log/rsyncd.log    #日志文件位置
+    hosts allow = 10.0.0.0/24         #白名单
+    #hosts deny =  黑名单
+
+    [share1]
+    path = /data/test1
+    comment = rsync test1
+    readonly = no
+    list = no
+    #writeonly = no
+    #ignore errors = yes
+    auth users = rsyncuser
+    secrets file = /etc/rsyncd/rsyncd.passwd    # 密码文件
+    #uid=   此处会覆盖默认配置
+    #hosts
+
+    [share2]
+    path = /data/test2
+    comment = rsync test2
+    readonly = no
+    list = no
+    auth users = rsyncuser
+    secrets file = /etc/rsyncd/rsyncd.passwd
+
+$ echo "rsyncuser:PASSWORD" > /etc/rsyncd/rsyncd.passwd
+$ chmod 600 /etc/rsyncd/rsyncd.passwd
+$ service xinetd start
+$ chkconfig rsync on 
+
+[被同步端]：
+1. 配置epel源：
+$ wget -O /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-6.repo
+2. 安装inotify-tools工具
+$ yum install inotify-tools -y 
+3. inotify监控脚本：
+$ mkdir /etc/rsyncd
+$ touch /etc/rsyncd/rsyncd.{conf,passwd}
+$ vim /etc/rsyncd/inotify_rsyncd.sh
+```
+#!/bin/bash
+ 
+inotify_rsync_fun ()
+{
+ 
+    dir=`echo $1 | awk -F"," '{print $1}'`
+    ip=`echo $1 | awk -F"," '{print $2}'`
+    des=`echo $1 | awk -F"," '{print $3}'`
+    user=`echo $1 | awk -F"," '{print $4}'`
+ 
+    /usr/bin/inotifywait -mr --timefmt '%d/%m/%y %H:%M' --format '%T %w %f' -e modify,delete,create,attrib ${dir} |while read DATE TIME DIR FILE; do
+        FILECHAGE=${DIR}${FILE}
+        /usr/bin/rsync -av --progress --delete  --password-file=/etc/rsyncd/rsyncd.passwd ${dir} ${user}@${ip}::${des} && echo "At ${TIME} on ${DATE},\
+        file $FILECHAGE was backed up via rsync" >> /var/log/rsyncd.log
+    done
+}
+count=2
+ 
+# localdir,host,rsync_module,user of rsync_module,
+sync1="/data/test1/,10.0.0.32,share1,rsyncuser"
+sync2="/data/test2/,10.0.0.32,share2,rsyncuser"
+ 
+#############################################################
+ 
+#main
+i=0
+while [ ${i} -lt ${count} ]; do
+    i=`expr ${i} + 1`
+    tmp="sync"$i
+    eval "sync=\$$tmp"
+    inotify_rsync_fun "$sync" &
+done
+```
+4. 运行
+$ echo 123456 > /etc/rsyncd/rsyncd.passwd
+$ chmod 600 /etc/rsyncd/rsyncd.passwd
+$ chmod a+x /etc/rsyncd/rsyncd.passwd
+$ nohup ./inotify_rsyncd.sh &
+
+
+
+

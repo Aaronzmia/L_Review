@@ -1,0 +1,33 @@
+#!/usr/bin/perl
+use strict;
+#use warnings;
+
+#8 0 sda 6326316 2821317 683141 43541632 1641692482 3505553508 79754 3277556108 0 1130318378 3321070934
+
+my $dev=$ARGV[0];
+if ($ARGV[0] eq "") {
+        print " ARGV not null\n";
+        print "Such as :perl get_diskinfo \"md-1\"\n";
+        exit 1;
+}
+
+sub get_diskinfo{
+	my ($a,$b,$c,$d,$e,$f,$g,$h,$i,$j);
+	my $data=`cat /proc/diskstats |grep -w "$dev"`;
+	chomp($data);
+	$data=~s/^\s+//;
+	$data=~s/\s+/ /g;
+	(undef,undef,undef,$a,$b,$c,$d,$e,$f,$g,$h,$i,$j,undef)=split(" ",$data);
+	print "$a:$b:$c:$d:$e:$f:$g:$h:$i:$j\n";
+	return($a,$b,$c,$d,$e,$f,$g,$h,$i,$j);
+}
+
+my @t1= get_diskinfo;
+sleep 2;
+my @t2= get_diskinfo;
+my $cur_ios=($t2[8] + $t1[8])/2;
+my ($reads,$rd_mrg,$rd_sectors,$ms_reading,$writes,$wr_mrg,$wr_sectors,$ms_writing,$ms_doing_io)=( ($t2[0]-$t1[0])/2, ($t2[1]-$t1[1])/2,($t2[2]-$t1[2])/2,($t2[3]-$t1[3])/2,($t2[4]-$t1[4])/2,($t2[5]-$t1[5])/2,($t2[6]-$t1[6])/2,($t2[7]-$t1[7])/2,($t2[9]-$t1[9])/2);
+my $read_size=$rd_sectors*512/1024;
+my $write_size=$wr_sectors*512/1024;
+my $total_size=$read_size+$write_size;
+print "OK ||dev=$ARGV[0],read_num=$reads,read_merge=$rd_mrg,read_sectors=$rd_sectors,read_respond=$ms_reading,write_num=$writes,write_merge=$wr_mrg,write_sectors=$wr_sectors,write_respond=$ms_writing,ioqueue=$cur_ios,io_time=$ms_doing_io,rsize=$read_size,wsize=$write_size,tsize=$total_size\n";

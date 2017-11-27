@@ -1,0 +1,296 @@
+虚拟化技术两种类型的实现：
+    Type-I：
+        hypervisor：在硬件上直接运行，在hypervisor上运行各虚拟主机
+    Type-II：
+        host：host上运行一个vmm（虚拟机监控器），在vmm上运行vms
+
+    
+Xen：类型I
+    hypervisor, Dom0 Kernel 驱动，利用Dmon0的用户空间提供所谓虚拟机管理工具(xvm,xl)
+
+KVM：Kernel-based Virtual Machine，Qumranet公司研发，依赖于HVM（硬件的虚拟化）：Intel VT-x, AMD AMD-V；
+    Linux的内核模块，一旦装载，整个内核成为hypervisor，并且内核之上运行在用户空间中常见的系统管理工具依然可以是直接管理这些虚拟机实例
+    
+KVM模块载入后的系统运行模式：
+    1. 内核模式：GuestOS执行的I/O类或其它的特殊指令的操作； 称做"来宾-内核"模式
+    2. 用户模式：代表GuestOS执行I/O类操作请求；qemu就运行在此处；
+    3. 来宾模式：虚拟机，运行一个GuestOS；GuestOS的非I/O类操作，GuestOS的用户模式；被称为虚拟机的用户模式更贴切；称做"来宾-用户"模式
+    4. kvm hypervisor：原有系统的内核
+
+KVM组件：
+    两类组件：
+        /dev/kvm：工作于hypervisor, 管理虚拟机的重要入口，在用户空间，可通过ioctl()体统调用来完成vm创建、启动等管理功能；它是一个字符设备，功能：
+            创建VM，为VM分配内存、读写VCPU的寄存器、向VCPU注入中断、运行VCPU(VCPU通过模拟线程实现)等；
+        qemu进程：工作于用户空间，主要用于实现模拟PC机的IO设备；
+    
+    KVM特性：
+        内存管理：
+            将分配给VM的内存交换至SWAP；
+            支持使用Huge Page；
+            支持使用Intel EPT或AMD RVI技术完成内存地址映射；GVA-->GPA-->HPA
+            支持KSM（Kernel Same-page Merging）：内存中相同页面的合并，相同内存页面共享
+        硬件支持：
+            取决于Linux内核
+        存储：
+            本地存储；
+            网络附加存储
+            存储区域网络
+            分布式存储：例如GlustFS
+        实时迁移：
+        支持的GuestOS：
+            Linux, Windows, OpenBSD, FreeBSD, OpenSolaris
+        设备驱动：
+            IO设备的完全虚拟化：模拟硬件
+            IO设备半虚拟化：在GuestOS中安装驱动；virtio
+                virtio-blk, virtio-net, virtio-pci, virtio-console, virtio-ballon
+    
+    KVM的局限：
+        一般局限性：
+            CPU Overcommit：允许过载，但过载能力有限，并不会提升性能，不建议虚拟CPU的数量不要大于物理CPU的数量
+            时间记录难以精确，依赖于时间同步机制
+        MAC地址：
+            VM量特别大时，存在冲突的可能性
+            实时迁移：
+            性能局限性：
+                网络I/O：全60%，半虚拟化75%，透传95%左右
+                磁盘I/O：全45%，半虚拟化85%，透传95%
+                显卡：全50%，半虚拟化不支持，透传不支持（centos 7支持半虚拟化）
+
+    KVM的工具栈：
+        qemu:
+            qemu-kvm 
+            qemu-img
+        libvirt:  
+            安装工具：
+                GUI：virt-manager
+                CLI：virt-install
+            管理工具：
+                virsh
+                virt-manager
+                virt-viewer
+        
+        QEMU主要用到以下几个部分：
+            处理器模拟器
+            仿真IO设备
+            关联模拟的设备至真实设备；
+            调试器
+            与模拟器交互的用户接口
+
+
+    KVM内存管理：
+        KVM继承了Linux系统管理内存的诸多特性，比如，分配给虚拟使用的内存可以被交换至交换空间、能够使用大内存页以实现更好的性能，以及对NUMA的支持能够让虚拟机高效访问更大的内存空间等。
+        KVM基于Intel的EPT（Extended Page Table）或AMD的RVI（RapidVirtualization Indexing）技术可以支持更新的内存虚拟功能，这可以降低CPU的占用率，并提供较好的吞吐量。
+        此外，KVM还借助于KSM（Kernel Same-page Merging）这个内核特性实现了内存页面共享，KSM通过扫描每个虚拟机的内存查找各虚拟机间相同的内存页，并将这些内存页合并为一个被各相关虚拟机共享的单独页面，在某虚拟机试图修改此页面中的数据时，KSM会重新为其提供一个新的页面副本，实践中，运行于同一台物理主机上的具有相同GuestOS的虚拟机之间出现相同内存页面的概率是很大的，比如共享库、内核或其它内存对象等都有可能表现为相同的内存页，因此，KSM技术可以降低内存占用进而提高整体性能。
+
+    VMM：对IO的驱动有三个模式
+        自主VMM：VMM自行提供驱动和控制台
+        混合VMM：借助于OS提供驱动
+            依赖于外部OS实现特权域
+            自我提供特权域
+        寄宿式VMM
+    
+    IO虚拟化模型：
+        模拟
+        半虚拟化
+        透传
+
+
+使用KVM：
+    1. 查看是否支持硬件辅助虚拟化:
+        grep -E --color=auto "(vmx|svm)" /proc/cpuinfo
+    2. 装载KVM模块：Linux内核自带支持
+        $ modprobe kvm 
+        $ modprobe kvm-intel
+        $ lsmod
+        Module                  Size  Used by
+        kvm_intel              55624  0 
+        kvm                   341551  1 kvm_intel
+    3. 验证：
+        $ ls /dev/kvm
+        /dev/kvm
+    4. 使用KVM
+        安装qemu或libvirt工具栈
+        [root@node4.azt.com ~]$yum grouplist |grep -i "virtual*"
+            Virtualization              # 提供核心的qemu-kvm 
+            Virtualization Client       # 提供Python-virtinst, virt-manager, virt-viewer
+            Virtualization Platform     # 提供libvirt, libvirt-client...
+            Virtualization Tools        # 提供libguestfs，一般环境不用
+        [root@node4.azt.com ~]$ yum install qemu-kvm -y
+        [root@node4.azt.com ~]$ ln -sv /usr/libexec/quemu-kvm /usr/bin
+
+    5. 命令选项：
+        标准选项
+        显示选项
+        块设备选项
+        网络选项
+        i386平台专用选项
+        字符设备选项
+        蓝牙设备选项
+        Linux启动专用选项
+        调试、专家模式专用原想
+
+使用虚拟机 
+    1. cirros project: 为cloud环境测试vm提供的微缩版linux
+    
+        qemu-img info：查看Img的信息
+            [root@node4.azt.com tools]$qemu-img info cirros-no_cloud-0.3.0-x86_64-disk.img 
+            image: cirros-no_cloud-0.3.0-x86_64-disk.img
+            file format: qcow2
+            virtual size: 39M (41126400 bytes)
+            disk size: 11M
+            cluster_size: 65536
+        启动一个cirros：
+            [root@node4.azt.com tools]$qemu-kvm -m 128 -smp 1 -name "cirros-test" -hda cirros-no_cloud-0.3.0-x86_64-disk.img 
+                -m：内存 
+                -smp：cpu
+                -name：显示的名称
+                -hda: 模拟ide
+        ctrl+alt+2：qemu提供的监控接口
+    2. 使用-drive指定磁盘影像文件
+        [root@node4.azt.com tools]$qemu-kvm -m 128 -smp 1 -name "cirros-test" -drive cirros-no_cloud-0.3.0-x86_64-disk.img,if=virtio,media=disk,cache=writeback,format=qcow2
+            if=virtio：指定为半虚拟化，直接收入了内核
+            media=disk：指定介质设备内容，disk,cdrom,ide,...
+            cache=writeback：启用回写机制的缓存
+            format=qcow2：img的格式
+        
+    3. 通过cdrom启动winxp的安装：
+				# qemu-kvm -name winxp -smp 4,sockets=1,cores=2,threads=2 -m 512 -drive file=/images/kvm/winxp.img,if=ide,media=disk,cache=writeback,format=qcow2 -drive file=/root/winxp_ghost.iso,media=cdrom
+            
+
+    4. 指定使用桥接网络接口：
+            qemu-kvm -m 128 -name test -smp 2 -drive file=/images/kvm/cirros-0.3.4-i386-disk.img,if=virtio,media=disk,cache=writeback,format=qcow2 -net nic -net tap,script=/etc/if-up,downscript=no -nographic
+
+    5. 显示选项：
+        SDL：Simple DirectMedia Layer：C开发，跨平台且开源多媒体程序库文件
+            在qemu中使用“-sdl”即可
+        VNC：Virtual Network Computing，使用RFB(使用Remote FrameBuffer)协议远程控制另外的主机
+            (1) yum install tigervnc-server
+            (2) vncpasswd
+            (3) vnc server
+            
+            qemu-kvm
+                -vnc display,option,option
+
+
+
+使用qemu-kvm管理KVM虚拟机：
+    Qemu是一个广泛使用的开源计算机仿真器和虚拟机。当作为仿真器时，可以在一种架构(如PC机)下运行另一种架构(如ARM)下的操作系统和程序。而通过动态转化，其可以获得很高的运行效率。当作为一个虚拟机时，qemu可以通过直接使用真机的系统资源，让虚拟系统能够获得接近于物理机的性能表现。qemu支持xen或者kvm模式下的虚拟化。当用kvm时，qemu可以虚拟x86、服务器和嵌入式powerpc，以及s390的系统。
+
+    QEMU 当运行与主机架构相同的目标架构时可以使用 KVM。例如，当在一个x86兼容处理器上运行 qemu-system-x86 时，可以利用 KVM 加速——为宿主机和客户机提供更好的性能；
+    
+    Qemu有如下几个部分组成：
+			◇	处理器模拟器(x86、PowerPC和Sparc)；
+			◇	仿真设备(显卡、网卡、硬盘、鼠标等)；
+			◇	用于将仿真设备连接至主机设备(真实设备)的通用设备；
+			◇	模拟机的描述信息；
+			◇	调试器；
+			◇	与模拟器交互的用户接口；
+    
+    使用qemu-kvm安装Guest
+
+        如2.5.5中所述，基于libvirt的工具如virt-manager和virt-install提供了非常便捷的虚拟机管理接口，但它们事实上上经二次开发后又封装了qemu-kvm的工具。因此，直接使用qemu-kvm命令也能够完成此前的任务。
+
+    qemu-kvm命令
+
+        在RHEL6上，qemu-kvm位于/usr/libexec目录中。由于此目录不属于PATH环境变量，故无法直接使用，这样也阻止了可以直接使用qemu作为创建并管理虚拟机。如若想使用qemu虚拟机，可以通过将/usr/libexec/qemu-kvm链接为/usr/bin/qemu实现。
+
+        # ln  -sv  /usr/lib/exec/qemu-kvm  /usr/bin/qemu-kvm
+    
+    qemu-kvm使用：
+        qemu-kvm  [options]  [disk_image]
+            ◇	标准选项；
+			◇	USB选项；
+			◇	显示选项；
+			◇	i386平台专用选项；
+			◇	网络选项；
+			◇	字符设备选项；
+			◇	蓝牙相关选项；
+			◇	Linux系统引导专用选项；
+			◇	调试/专家模式选项；
+			◇	PowerPC专用选项；
+			◇	Sparc32专用选项；
+        标准选项：设计指定主机类型、CPU模式、NUMA、软驱设备、光驱设备及硬件设备
+            ◇   -name NAME：设定虚拟机名称
+            ◇   -M machine：指定要模拟的主机类型，如Standard PC、ISA-only PC或Intel-Mac等，可以使用“qemu-kvm -M ?”获取所支持的所有类型；
+			◇	-m megs：设定虚拟机的RAM大小；
+			◇	-cpu model：设定CPU模型，如coreduo、qemu64等，可以使用“qemu-kvm -cpu ?”获取所支持的所有模型；
+			◇	-smp n[,cores=cores][,threads=threads][,sockets=sockets][,maxcpus=maxcpus]：设定模拟的SMP架构中CPU的个数等、每个CPU的核心数及CPU的socket数目等；PC机上最多可以模拟255颗CPU；maxcpus用于指定热插入的CPU个数上限；
+			◇	-numa opts：指定模拟多节点的numa设备；非统一内存访问
+			◇	-fda file
+			◇	-fdb file：使用指定文件(file)作为软盘镜像，file为/dev/fd0表示使用物理软驱；
+			◇	-hda file
+			◇	-hdb file
+			◇	-hdc file
+			◇	-hdd file：使用指定file作为硬盘镜像；
+			◇	-cdrom file：使用指定file作为CD-ROM镜像，需要注意的是-cdrom和-hdc不能同时使用；将file指定为/dev/cdrom可以直接使用物理光驱；
+
+			◇	-drive option[,option[,option[,...]]]：定义一个硬盘设备；可用子选项有很多。
+                	file=/path/to/somefile：硬件映像文件路径；    
+                	if=interface：指定硬盘设备所连接的接口类型，即控制器类型，如ide、scsi、sd、mtd、floppy、pflash及virtio等；
+                	index=index：设定同一种控制器类型中不同设备的索引号，即标识号；
+                	media=media：定义介质类型为硬盘(disk)还是光盘(cdrom)；
+                	snapshot=snapshot：指定当前硬盘设备是否支持快照功能：on或off；
+                	cache=cache：定义如何使用物理机缓存来访问块数据，其可用值有none、writeback、unsafe和writethrough四个；
+                	format=format：指定映像文件的格式，具体格式可参见qemu-img命令；
+            ◇	-boot [order=drives][,once=drives][,menu=on|off]：定义启动设备的引导次序，每种设备使用一个字符表示；不同的架构所支持的设备及其表示字符不尽相同，在x86 PC架构上，a、b表示软驱、c表示第一块硬盘，d表示第一个光驱设备，n-p表示网络适配器；默认为硬盘设备；
+                    -boot order=dc,once=d
+
+        qemu-kvm的显示选项
+
+			显示选项用于定义虚拟机启动后的显示接口相关类型及属性等。
+
+			◇	-nographic：默认情况下，qemu使用SDL来显示VGA输出；而此选项用于禁止图形接口，此时,qemu类似一个简单的命令行程序，其仿真串口设备将被重定向到控制台；
+			◇	-curses：禁止图形接口，并使用curses/ncurses作为交互接口；
+			◇	-alt-grab：使用Ctrl+Alt+Shift组合键释放鼠标；
+			◇	-ctrl-grab：使用右Ctrl键释放鼠标；
+			◇	-sdl：启用SDL；
+			◇	-spice option[,option[,...]]：启用spice远程桌面协议；其有许多子选项，具体请参照qemu-kvm的手册；
+			◇	-vga type：指定要仿真的VGA接口类型，常见类型有：
+					cirrus：Cirrus Logic GD5446显示卡；
+					std：带有Bochs VBI扩展的标准VGA显示卡；
+					vmware：VMWare SVGA-II兼容的显示适配器；
+					qxl：QXL半虚拟化显示卡；与VGA兼容；在Guest中安装qxl驱动后能以很好的方式工作，在使用spice协议时推荐使用此类型；
+					none：禁用VGA卡；
+			◇	-vnc display[,option[,option[,...]]]：默认情况下，qemu使用SDL显示VGA输出；使用-vnc选项，可以让qemu监听在VNC上，并将VGA输出重定向至VNC会话；使用此选项时，必须使用-k选项指定键盘布局类型；其有许多子选项，具体请参照qemu-kvm的手册；
+
+			display:
+			    (1) host:N
+					172.16.100.7:1, 监听于172.16.100.7主的5900+N的端口上
+				(2) unix:/path/to/socket_file
+				(3) none
+ 
+			options:
+				password: 连接时需要验正密码；设定密码通过monitor接口使用change
+				reverse: “反向”连接至某处于监听状态的vncview上；
+
+			-monitor stdio：表示在标准输入输出上显示monitor界面
+			-nographic
+				Ctrl-a, c: 在console和monitor之间切换
+				Ctrl-a, h: 显示帮助信息
+
+
+        i386平台专用选项
+
+            ◇	-no-acpi：禁用ACPI功能，GuestOS与ACPI出现兼容问题时使用此选项；
+            ◇	-balloon none：禁用balloon设备；
+            ◇	-balloon virtio[,addr=addr]：启用virtio balloon设备；
+
+        网络属性相关选项
+
+            网络属性相关选项用于定义网络设备接口类型及其相关的各属性等信息。这里只介绍nic、tap和user三种类型网络接口的属性，其它类型请参照qemu-kvm手册。
+
+            ◇	-net nic[,vlan=n][,macaddr=mac][,model=type][,name=name][,addr=addr][,vectors=v]：创建一个新的网卡设备并连接至vlan n中；PC架构上默认的NIC为e1000，macaddr用于为其指定MAC地址，name用于指定一个在监控时显示的网上设备名称；emu可以模拟多个类型的网卡设备，如virtio、i82551、i82557b、i82559er、ne2k_isa、pcnet、rtl8139、e1000、smc91c111、lance及mcf_fec等；不过，不同平台架构上，其支持的类型可能只包含前述列表的一部分，可以使用“qemu-kvm -net nic,model=?”来获取当前平台支持的类型；
+            ◇	-net tap[,vlan=n][,name=name][,fd=h][,ifname=name][,script=file][,downscript=dfile]：通过物理机的TAP网络接口连接至vlan n中，使用script=file指定的脚本(默认为/etc/qemu-ifup)来配置当前网络接口，并使用downscript=file指定的脚本(默认为/etc/qemu-ifdown)来撤消接口配置；使用script=no和downscript=no可分别用来禁止执行脚本；
+            ◇	-net user[,option][,option][,...]：在用户模式配置网络栈，其不依赖于管理权限；有效选项有：
+                	vlan=n：连接至vlan n，默认n=0；
+                	name=name：指定接口的显示名称，常用于监控模式中；
+                	net=addr[/mask]：设定GuestOS可见的IP网络，掩码可选，默认为10.0.2.0/8；
+                	host=addr：指定GuestOS中看到的物理机的IP地址，默认为指定网络中的第二个，即x.x.x.2；
+                	dhcpstart=addr：指定DHCP服务地址池中16个地址的起始IP，默认为第16个至第31个，即x.x.x.16-x.x.x.31；
+                	dns=addr：指定GuestOS可见的dns服务器地址；默认为GuestOS网络中的第三个地址，即x.x.x.3；
+                	tftp=dir：激活内置的tftp服务器，并使用指定的dir作为tftp服务器的默认根目录；
+                	bootfile=file：BOOTP文件名称，用于实现网络引导GuestOS；如：qemu -hda linux.img -boot n -net user,tftp=/tftpserver/pub,bootfile=/pxelinux.0
+
+        eg:
+            qemu-img create -o size=20G,preallocation=metadata -f qcow2 /images/windows/winxp.qcow2
+            qemu-kvm -m 512 -smp 2 -cpu host -drive file=/images/windows/wixp.qcow2,media=disk -drive file=/PATH/TO/***.iso,media=cdrom -boot order=dc,once=d 

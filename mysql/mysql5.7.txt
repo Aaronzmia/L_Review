@@ -1,0 +1,5 @@
+1. 登录初始密码：
+    [root@docker ~]#  grep "temporary password" /var/log/mysqld.log
+    2017-10-19T06:41:16.090475Z 1 [Note] A temporary password is generated for root@localhost: ZCvwUwipg1&k
+
+2. 

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="jquery-1.12.4.min.js"></script>
+    <script>
+        $(function(){
+            // // 在li中全部插入111
+            // $('.list li').html('111')
+            
+            //jquery的循环
+            $('.list li').each(function(index){
+                // alert(index);
+
+                // 传入索引值index
+                $(this).html(index+1);
+            })
+        })
+    </script>
+</head>
+<body>
+    <ul class="list">
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+    </ul>
+</body>
+</html>

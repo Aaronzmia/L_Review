@@ -1,0 +1,16 @@
+寻检平台bug修复
+1. insert计算为0的问题。
+2. 更改innodb_buffer命中计算方式为：
+	从这个来看innodb buffer hit Ratios的命中计算需要本次取的值和上次值做一个减法公式应该为
+
+	ib_bp_hit=1000 – (t2.iReads – t1.iReads)/(t2.iReadRequest – t1.iReadRequest)*1000
+	t(n): 时间点 两个时间间隔最少是30秒以上,在小意义不大.
+	iReads: Innodb_buffer_pool_reads
+	iReadRequest: Innodb_buffer_pool_read_requests
+3. 添加my_conn表里写入数据
+   
+   
+更新步骤：
+	1. 数据库my_unique_log中添加两个字段：
+	alter table my_unique_log add column aborted_connects bigint defualt 0, add column threads_created bigint default 0 after innodb_os_log_written;
+	2. 更新get_my_stats.pl程序即可

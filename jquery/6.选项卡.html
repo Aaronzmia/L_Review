@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>闭包</title>
+    <style>
+        .btns{
+            width: 500px;
+            height: 50px;
+        }
+        .btns input{
+            width: 100px;
+            height: 50px;
+            background-color: #666;
+            color: #fff;
+            border: 0px;
+        }
+        .contents div{
+            width: 500px;
+            height: 300px;
+            background-color: gold;
+            display: none;
+            line-height: 300px;
+            text-align: center;
+        }
+        .contents div.act{
+            display: block;
+        }
+        .btns input.cur{
+            background-color: gold;
+        }
+    </style>
+    <script src="jquery-1.12.4.min.js"></script>
+    <script>
+        $(function(){
+            $('#btns input').click(function(){
+                //this是原生对象
+                $(this).addClass('cur').siblings().removeClass('cur');
+                //获取当前按钮的索引值
+                // alert($(this).index())
+                $('#contents div').eq($(this).index()).addClass('act').siblings().removeClass('act');
+            });
+        })
+    </script>
+</head>
+<body>
+    <div class="btns" id="btns">
+        <input type="button" value="tab01" class="cur">
+        <input type="button" value="tab02">
+        <input type="button" value="tab03">
+    </div>
+
+    <div class="contents" id="contents">
+        <div class="act">tab文字内容一</div>
+        <div>tab文字内容二</div>
+        <div>tab文字内容三</div>
+    </div>
+
+</body>
+</html>

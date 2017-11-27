@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>jquery尺寸位置</title>
+    <style>
+        .box{
+            width: 100px;
+            height: 100px;
+            background-color: gold;
+            margin-bottom: 10px;
+        }
+
+        .pos{
+            margin-left: 500px;
+        }
+
+        .pop{
+            width: 100px;
+            height: 100px;
+            background-color: red;
+            position: fixed;
+            left:0;
+            top:0;
+            display: none;
+        }
+    </style>
+    <script src="jquery-1.12.4.min.js"></script>
+    <script>
+        $(function(){
+            var $pos = $('.pos')
+            var pos = $pos.offset();
+            var w = $pos.outerWidth();
+            var h = $pos.outerHeight();
+            // console.log(pos)
+
+            var $pop = $('.pop')
+            $pop.css({left:pos.left+w,top:pos.top})
+            $pos.mouseover(function(){
+                $pop.show();
+            })
+            $pos.mouseout(function(){
+                $pop.hide();
+            })
+            
+            // s鼠标事件
+
+        })
+    </script>
+</head>
+<body>
+    <div class="box"></div>
+    <div class="box"></div>
+    <div class="box pos"></div>
+    <div class="box"></div>
+    <div class="pop">提示信息！</div>
+</body>
+</html>

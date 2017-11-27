@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+open(LOAD,"/proc/loadavg");
+my $line =<LOAD>;
+close(LOAD);
+my ($la1,$la5,$la15,$s,$pid)=split " ", $line;
+my ($r,$all) = split "/", $s;
+print "OK||$la1,$la5,$la15,$r,$all";
+func CpuOutPut(){
+        var  tmp1_cpu, tmp2_cpu Tmpcpu
+        tmp1_cpu = GetCpu()
+        /*
+        start := time.Now()
+        h, min, _ := start.Clock()
+        y, m, d := start.Date()
+        */
+        cpuFile :="./output/cpu.csv"
+        cpu_fd, err :=  os.Create(cpuFile)
+        defer cpu_fd.Close()
+
+        if err != nil {
+                fmt.Println(cpuFile, err)
+                return
+        }
+        for {
+                buf := new(bytes.Buffer)
+                r2 := csv.NewWriter(buf)
+                s := make([]string, 10)
+
+                time.Sleep(1*time.Minute)
+                addtime := time.Now().Unix()
+                tmp2_cpu = GetCpu()
+                var  cpu_pct Cpuuse
+                cpu_pct =  tmp1_cpu.Cpupct(tmp2_cpu)
+                tmp1_cpu = tmp2_cpu
+
+                s[0] =  strconv.Itoa(int(addtime))
+                s[1] =  strconv.Itoa(cpu_pct.cpu_user_pct)
+                s[2] =  strconv.Itoa(cpu_pct.cpu_nice_pct)
+                s[3] =  strconv.Itoa(cpu_pct.cpu_sys_pct)
+                s[4] =  strconv.Itoa(cpu_pct.cpu_idle_pct)
+                s[5] =  strconv.Itoa(cpu_pct.cpu_iowait_pct)
+                s[6] =  strconv.Itoa(cpu_pct.cpu_irq_pct)
+                s[7] =  strconv.Itoa(cpu_pct.cpu_softirq_pct)
+                s[8] =  strconv.Itoa(cpu_pct.cpu_all_irq_pct)
+                s[9] =  strconv.Itoa(cpu_pct.cpu_total_pct)
+                r2.Write(s)
+                r2.Flush()
+                //fmt.Println(buf)
+                cpu_fd.WriteString(buf.String())

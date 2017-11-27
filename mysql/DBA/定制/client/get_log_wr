@@ -1,0 +1,90 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use File::Copy;
+use DBI;
+use Getopt::Long;
+use vars qw($opt_i $opt_d $opt_p);
+GetOptions
+        ("i=s" => \$opt_i, "id=s"  => \$opt_i,
+         "d=s" => \$opt_d, "date=s" => \$opt_d,
+         "p=s" => \$opt_p, "pime=s"  => \$opt_p);
+
+my $id      = $opt_i;
+my $pime    = $opt_p;
+my $date     = $opt_d." ".$opt_p;
+
+my $archive = "/usr/local/nagios/archive/";
+my $baklog = "$archive"."baklog.err";
+my $msg;
+my $defaults = `my_print_defaults mysqld`;
+my $basedir = ($defaults =~ m/--basedir=(.*)/)[0];
+my $datadir = ($defaults =~ m/--datadir=(.*)/)[0];
+my $errorlog = ($defaults =~ m/--log-error/)[0];
+if ( !defined($errorlog)){
+        #$errorlog = "$datadir/".`hostname`;
+        $errorlog = "$datadir/"."mysql01";
+        chomp($errorlog);
+        $errorlog .=".err";
+}else{
+        if ( -f $errorlog ) {
+        $errorlog = $errorlog;
+        }
+}
+#print "$errorlog\n";
+if ( -s $errorlog) {
+   if ( -f $baklog){
+	my @ar1=stat($errorlog);
+	my $new_size=$ar1[7];
+	my @ar2=stat($baklog);
+	my $old_size=$ar2[7];
+	if($new_size ge $old_size){
+        	$msg = `diff $baklog $errorlog`;
+        	#`/bin/cp -f $errorlog $baklog`;
+		copy("$errorlog","$baklog") or die "Copy failed: $!";
+		}else{
+		copy("$errorlog","$baklog") or die "Copy failed: $!";
+		}
+
+        }else{
+        #`/bin/cp -f $errorlog $baklog`;
+	copy("$errorlog","$baklog") or die "Copy failed: $!";
+        }
+
+}
+#if ($msg){
+#print "ERROR || $msg";
+#}
+#else{
+#print "OK";
+#}
+#my $time="2011-12-12 12:01:00";
+if ($msg){
+$msg=~s/^/insert into my_log_wr(instance_id,add_time,content)value($id,"$date","/;
+$msg=~s/$/");/;
+print "$msg\n";
+my ($dbh,$dbp);
+sub connect_to_mysql{
+        my ($host,$port,$user,$pw,$dcon) = @_;
+        my $dsn;
+        $dsn = "DBI:mysql:host=$host;". ($port ? ";port=$port" : "");
+       # print "$dsn\n";
+        eval{
+                local $SIG{ALRM} = sub { die 'TIMEOUT' };
+                alarm(5);
+                $$dcon=DBI->connect($dsn, $user, $pw) or warn "Error: $dsn\n";
+                alarm(0);
+        };
+        alarm(0);
+        if( $@ ){
+                print "Error: $dsn\n";
+        }
+}
+connect_to_mysql('192.168.110.18','3306','monitor','monitoradmin',\$dbh);
+$dbh->do("use patrol_db");
+my $q = $dbh->prepare("$msg");
+$q->execute();
+$dbh->disconnect();
+}else{
+print "OK\n";
+}

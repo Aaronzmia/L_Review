@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        .list{
+            list-style: none;
+        }
+        .list li{
+            height: 30px;
+            background-color:gold;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+    </style>
+    <script src="jquery-1.12.4.min.js"></script>
+    <script>
+        $(function(){
+            // //click绑定了8次
+            // $('.list li').click(function(){
+            //     alert($(this).html())
+            // })
+
+            // 事件委托
+            $('.list').delegate('li','click',function(){
+                alert($(this).html())
+            })
+        })
+    </script>
+</head>
+<body>
+    <ul class="list">
+        <li>1</li>
+        <li>2</li>
+        <li>3</li>
+        <li>4</li>
+        <li>5</li>
+        <li>6</li>
+        <li>7</li>
+        <li>8</li>
+    </ul>
+</body>
+</html>

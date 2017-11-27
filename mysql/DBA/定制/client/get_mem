@@ -1,0 +1,8 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+open (MM,'-|','cat /proc/meminfo |grep MemTotal -A 1|awk \'{print $2}\'|xargs|awk \'{printf "%d %d",$1/1024,$2/1024}\'');
+my $line=<MM>;
+close(MM);
+print $line;

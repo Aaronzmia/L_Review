@@ -1,0 +1,58 @@
+# 全量备份与增量备份
+
+1. 全量备份：
+备份所有库：
+    mysql -uroot -p -S /PATH/TO/SOCKET -F -B -A |gzip > /PATH/TO/BACK_$(date -%F).sql.gz
+备份单个库：
+    mysql -uroot -p -S /PATH/TO/SOCKET -F -B DATABASE_NAME | gzip > /PATH/TO/BACK_$(date -%F).sql.gz   
+
+2. 增量备份:
+    上一次全备份到下一次全备份之前所更新的数据备份，对于MySQL来说，binlog日志就是MySQL的增量数据
+    常见的备份方案是在一个不对外的从库上开启binglog，然后实施定时全量备份和增量备份
+按天备份：
+    优点：恢复时间短，维护成本低
+    缺点：占用空间多，占用系统资源多，经常锁表影响用户体验
+按周备份：
+    优点：占用空间小
+    缺点：维护成本高，恢复麻烦，时间长
+
+3. 企业场景：
+中小公司：全量一般一天一次，业务流量低谷执行全备，备份时锁表
+单台数据库：用rsync配合cron定时任务或inotify或主从复制把所有的binlog备份到远程服务器
+    rsync -avz /PATH/TO/mysl-bin.000* rsync_backup@xxxx::BACKUP --password-file=/etc/rsync.password
+大公司：周末全量，其余时间增量
+一主多从：会有一个从库做备份，延迟同步
+
+
+# Mysql增量恢复必备条件：
+1. 开启MySQL log-bin日志功能：主库和备份的从库都要开启binlog记录功能
+    vim /etc/my.cnf
+        log-bin = /PATH/TO/NAME
+2. 存在全量备份
+    mysqldump -uroot -p -S /PATH/TO/SOCKET --default-character-set=gbk --single-transaction -F -B -A |gzip > /PATH/TO/BACK_$(date -%F).sql.gz
+    innodb引擎：
+        mysqldump -u$MYUSER -p$MYPASS -S $MYSOCK --single-transaction -F -B -A --master-data=2|gzip > /PATH/TO/BACK_$(date -%F).sql.gz
+    MyIsam引擎
+        mysqldump -u$MYUSER -p$MYPASS -S $MYSOCK --lock-all-tables -F -B -A |gzip > /PATH/TO/BACK_$(date -%F).sql.gz
+3. 常用脚本
+```
+#!/bin/bash
+
+BAKDATE=`date +%F`
+MYUSER=root
+MYPASS="redhat"
+MYSOCK=/var/run/mariadb/mariadb.pid
+DBNAME=""
+MAIN_PATH=/data/backup
+DATA_PATH=/data/backup
+LOG_FILE=${DATA_PATH}/mysql_logs_${BAKDATE}.log
+DATA_FILE=${DATA_PATH}/mysql_backup_${BAKDATE}.sql.gz
+
+# command
+MYSQL_PATH=/usr/bin/
+MYSQL_DUMP="$MYSQL_PATH/mysqldump -u$MYUSER -p$MYPASS -S $MYSOCK --default-character-set=gbk --single-transaction -F -B -A -e"
+
+#backup
+${MYSQL_DUMP} | gzip > $DATA_FILE
+```
+

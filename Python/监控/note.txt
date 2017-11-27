@@ -1,0 +1,23 @@
+1. 监控系统运行时间：/proc/uptime
+```
+[root@localhost ~]# cat /proc/uptime 
+6464063.12 51672241.25
+第一个参数是代表从系统启动到现在的时间(以秒为单位)
+第二个参数是代表系统空闲的时间(以秒为单位)
+```
+from datetime inmport timedelta
+def get_uptime():
+    try:
+        with open('/proc/uptime', 'r') as f:
+            uptime_seconds = float(f.readline().split()[0])
+            uptime_time = str(timedelta(seconds=uptime_seconds))
+            print(uptime_time)
+            data = uptime_time.split('.', 1)[0]
+            print(data)
+            # 74 days, 19:40:59.550000
+            # 74 days, 19:40:59
+    except Exception as err:
+        data = str(err)
+    return data
+     
+2. 获取CPU信息

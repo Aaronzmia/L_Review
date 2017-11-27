@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="jquery-1.12.4.min.js"></script>
+    <script>
+        $(function(){
+            // 在现成的元素后面插入元素
+            var $span = $('<span>span元素</span>');
+            var $p = $('<p>p元素</p>')
+            // $('#div').append($span);
+            // $('#div').append($p);
+            $span.appendTo('#div')
+        })
+    </script>
+</head>
+<body>
+    <div id="div"></div>
+</body>
+</html>

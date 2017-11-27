@@ -1,0 +1,24 @@
+#!/usr/bin/perl 
+use strict;
+use warnings;
+
+my $dev=$ARGV[0];
+
+sub get_trffic{
+	my $data=`cat /proc/net/dev|grep "$dev"|head -n1`;
+	$data =~ /$dev\:(\d+)\D+\d+\D+\d+\D+\d+\D+\d+\D+\d+\D+\d+\D+\d+\D+(\d+)\D+/;
+	my $recv = int($1/1024);
+	my $send = int($2/1024);
+#	print "$recv, $send\n";
+	return($recv, $send);
+}
+
+my @t1= get_trffic;
+#while(1){
+sleep 2;
+my @t2= get_trffic;
+
+my ($r, $s)=( ($t2[0] - $t1[0])/2, ($t2[1]-$t1[1])/2 );
+print "$r $s\n";
+#@t1=@t2;
+#}

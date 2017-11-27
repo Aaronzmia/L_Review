@@ -42,7 +42,7 @@ upstream bp_servers {
 server {
     listen 80;
     server_name bp.azt.com;
-    location / {
+    location / {你
             proxy_pass http://bp_servers;
     }
 }
@@ -123,7 +123,7 @@ if ($request_uri ~* "^/static/(.*)$") {
 }
 if ($request_uri ~* "^/upload/(.*)$") {
     proxy_pass http://upload_pools/$1;
-}
+}jut
 location /  {
     proxy_pass http://default_pools/$1;
 }

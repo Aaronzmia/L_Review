@@ -1,0 +1,20 @@
+Mysql 5.1：
+    默认存储引擎：MyISAM
+    数据存储分成三个文件：
+        1. 表结构文件，以表的名字开始，.frm
+        2. 数据文件，.MYD
+        3. 索引文件，.MYI
+    特点：
+        表级锁、不支持事务和全文索引
+
+MySQL5.5.x
+    默认引擎：InnoDB,具有提交、回滚和崩溃恢复能力的事务安全(ACID兼容)存储引擎
+    特点：
+        行级锁，非锁定读
+    数据存储： 
+        一个表空间中存储表和索引，表空间可以包含数个文件(或原始磁盘分区)
+        innodb表可以是任何尺寸
+
+        innodb_file_per_table=1
+        innodb_file_format=barracuda
+        innodb_strict_mode=1
